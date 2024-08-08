@@ -97,8 +97,8 @@ impl GeoLocation {
 
 crate::wrapper_impl_value_type!(Joint, nvidia_deepstream_sys::NvDsJoint);
 impl Joint {
-    pub fn new(x: f32, y: f32, z: f32) -> Self {
-        Joint::from_native_type(nvidia_deepstream_sys::NvDsJoints { x, y, z })
+    pub fn new(x: f32, y: f32, z: f32, confidence: f32) -> Self {
+        Joint::from_native_type(nvidia_deepstream_sys::NvDsJoint { x, y, z, confidence })
     }
 
     pub fn x(&self) -> f32 {
@@ -112,40 +112,44 @@ impl Joint {
     pub fn z(&self) -> f32 {
         self.as_native_type_ref().z
     }
+
+    pub fn confidence(&self) -> f32 {
+        self.as_native_type_ref().confidence
+    }
 }
 
 crate::wrapper_impl_value_type!(Joints, nvidia_deepstream_sys::NvDsJoints);
 
 impl Joints {
-    pub fn new(joints: *mut Joint, num_joints: u32, pose_type: u32) -> Self {
+    pub fn new(joints: *mut nvidia_deepstream_sys::NvDsJoint, num_joints: i32, pose_type: i32) -> Self {
         Joints::from_native_type(nvidia_deepstream_sys::NvDsJoints { joints, num_joints, pose_type })
     }
 
-    pub fn lat(&self) -> f64 {
-        self.as_native_type_ref().lat
+    pub fn joints(&self) -> &Joint {
+        unsafe { Joint::from_native_type_ref(&*self.as_native_type_ref().joints) }
     }
 
-    pub fn lon(&self) -> f64 {
-        self.as_native_type_ref().lon
+    pub fn num_joints(&self) -> i32 {
+        self.as_native_type_ref().num_joints
     }
 
-    pub fn alt(&self) -> f64 {
-        self.as_native_type_ref().alt
+    pub fn pose_type(&self) -> i32 {
+        self.as_native_type_ref().pose_type
     }
 }
 
-crate::wrapper_impl_value_type!(Joints, nvidia_deepstream_sys::NvDsJoints);
+crate::wrapper_impl_value_type!(Embedding, nvidia_deepstream_sys::NvDsEmbedding);
 
 impl Embedding {
-    pub fn new(embedding_vector: *mut f32, embedding_length: usize) -> Self {
-        Joints::from_native_type(nvidia_deepstream_sys::NvDsJoints { embedding_vector, embedding_length })
+    pub fn new(embedding_vector: *mut f32, embedding_length: u32) -> Self {
+        Embedding::from_native_type(nvidia_deepstream_sys::NvDsEmbedding { embedding_vector, embedding_length })
     }
 
-    pub fn embedding_vector(&self) -> f64 {
+    pub fn embedding_vector(&self) -> *mut f32 {
         self.as_native_type_ref().embedding_vector
     }
 
-    pub fn embedding_length(&self) -> f64 {
+    pub fn embedding_length(&self) -> u32 {
         self.as_native_type_ref().embedding_length
     }
 }
@@ -739,11 +743,11 @@ impl<T: Clone> EventMsgMeta<T> {
     }
 
     pub fn pose(&self) -> &Joints {
-        Joints::from_native_type_ref(&self.0.as_native_type().joints)
+        Joints::from_native_type_ref(&self.0.as_native_type_ref().pose)
     }
 
     pub fn embedding(&self) -> &Embedding {
-        Embedding::from_native_type_ref(&self.0.as_native_type().embedding)
+        Embedding::from_native_type_ref(&self.0.as_native_type_ref().embedding)
     }
 
     pub unsafe fn ext_msg(&self) -> Option<&T> {
@@ -1026,8 +1030,8 @@ impl<'a> EventMsgMetaBuilder<'a> {
                 videoPath: self.video_path.to_glib_full(),
                 extMsg: ext_msg as _,
                 extMsgSize: ext_msg_size as _,
-                pose: self.bbox.unwrap_or_default().as_native_type(),
-                embedding: self.location.unwrap_or_default().as_native_type(),
+                pose: self.pose.unwrap_or_default().as_native_type(),
+                embedding: self.embedding.unwrap_or_default().as_native_type(),
             }),
             core::marker::PhantomData,
         ))
