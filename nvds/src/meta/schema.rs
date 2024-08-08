@@ -95,6 +95,61 @@ impl GeoLocation {
     }
 }
 
+crate::wrapper_impl_value_type!(Joint, nvidia_deepstream_sys::NvDsJoint);
+impl Joint {
+    pub fn new(x: f32, y: f32, z: f32) -> Self {
+        Joint::from_native_type(nvidia_deepstream_sys::NvDsJoints { x, y, z })
+    }
+
+    pub fn x(&self) -> f32 {
+        self.as_native_type_ref().x
+    }
+
+    pub fn y(&self) -> f32 {
+        self.as_native_type_ref().y
+    }
+
+    pub fn z(&self) -> f32 {
+        self.as_native_type_ref().z
+    }
+}
+
+crate::wrapper_impl_value_type!(Joints, nvidia_deepstream_sys::NvDsJoints);
+
+impl Joints {
+    pub fn new(joints: *mut Joint, num_joints: u32, pose_type: u32) -> Self {
+        Joints::from_native_type(nvidia_deepstream_sys::NvDsJoints { joints, num_joints, pose_type })
+    }
+
+    pub fn lat(&self) -> f64 {
+        self.as_native_type_ref().lat
+    }
+
+    pub fn lon(&self) -> f64 {
+        self.as_native_type_ref().lon
+    }
+
+    pub fn alt(&self) -> f64 {
+        self.as_native_type_ref().alt
+    }
+}
+
+crate::wrapper_impl_value_type!(Joints, nvidia_deepstream_sys::NvDsJoints);
+
+impl Embedding {
+    pub fn new(embedding_vector: *mut f32, embedding_length: usize) -> Self {
+        Joints::from_native_type(nvidia_deepstream_sys::NvDsJoints { embedding_vector, embedding_length })
+    }
+
+    pub fn embedding_vector(&self) -> f64 {
+        self.as_native_type_ref().embedding_vector
+    }
+
+    pub fn embedding_length(&self) -> f64 {
+        self.as_native_type_ref().embedding_length
+    }
+}
+
 crate::wrapper_impl_value_type!(Coordinate, nvidia_deepstream_sys::NvDsCoordinate);
 
 impl Coordinate {
@@ -683,6 +738,14 @@ impl<T: Clone> EventMsgMeta<T> {
         unsafe { GStr::from_ptr(self.0.as_native_type_ref().videoPath) }
     }
 
+    pub fn pose(&self) -> &Joints {
+        Joints::from_native_type_ref(&self.0.as_native_type().joints)
+    }
+
+    pub fn embedding(&self) -> &Embedding {
+        Embedding::from_native_type_ref(&self.0.as_native_type().embedding)
+    }
+
     pub unsafe fn ext_msg(&self) -> Option<&T> {
         if self.0.as_native_type_ref().extMsgSize as usize == std::mem::size_of::<T>() {
             NonNull::new(self.0.as_native_type_ref().extMsg as *mut T).map(|p| p.as_ref())
@@ -748,6 +811,8 @@ impl<T: Clone> Clone for EventMsgMeta<T> {
                     videoPath: nvidia_deepstream_sys::strdup(self.0.as_native_type_ref().videoPath),
                     extMsg: std::ptr::null_mut(), // Box::into_raw(x),
                     extMsgSize: self.0.as_native_type_ref().extMsgSize,
+                    pose: self.0.as_native_type_ref().pose,
+                    embedding: self.0.as_native_type_ref().embedding,
                 }),
                 core::marker::PhantomData,
             )
@@ -789,6 +854,8 @@ pub struct EventMsgMetaBuilder<'a> {
     sensor_str: Option<&'a str>,
     other_attrs: Option<&'a str>,
     video_path: Option<&'a str>,
+    pose: Option<Joints>,
+    embedding: Option<Embedding>,
 }
 
 impl<'a> EventMsgMetaBuilder<'a> {
@@ -813,6 +880,8 @@ impl<'a> EventMsgMetaBuilder<'a> {
             sensor_str: None,
             other_attrs: None,
             video_path: None,
+            pose: None,
+            embedding: None,
         }
     }
 
@@ -911,6 +980,16 @@ impl<'a> EventMsgMetaBuilder<'a> {
         self
     }
 
+    pub fn pose(mut self, value: Joints) -> Self {
+        self.pose = Some(value);
+        self
+    }
+
+    pub fn embedding(mut self, value: Embedding) -> Self {
+        self.embedding = Some(value);
+        self
+    }
+
     pub fn build(self) -> Box<EventMsgMeta<()>> {
         self.internal_build(None)
     }
@@ -947,6 +1026,8 @@ impl<'a> EventMsgMetaBuilder<'a> {
                 videoPath: self.video_path.to_glib_full(),
                 extMsg: ext_msg as _,
                 extMsgSize: ext_msg_size as _,
+                pose: self.bbox.unwrap_or_default().as_native_type(),
+                embedding: self.location.unwrap_or_default().as_native_type(),
             }),
             core::marker::PhantomData,
         ))
